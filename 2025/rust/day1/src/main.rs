@@ -1,59 +1,41 @@
-// 0 -> 99
-//
-// L left
-// R right
-
-// if dial 11
-// R8 -> 19
-// L19 -> 0
-//
-// Going over 0 points to 99
-// Going over 99 points to 0
-//
-// if dial 5
-// L10 -> 95
-// R5 -> 0
-//
-// Dial starts at 50
-//
-// Password is how many times dial was at 0
-
-use std::ops::Range;
-
 fn main() {
-    println!("DAY1 p1: {}", day1p1(include_str!("../../../input/day1")));
+    let (a, b) = p(include_str!("../../../input/day1"));
+    println!("DAY1 p1: {}", a);
+    println!("DAY1 p2: {}", b);
 }
 
-fn day1p1(input: &str) -> usize {
-    let dial_boundary: Range<i16> = 0..99;
+fn p(input: &str) -> (i32, i32) {
+    let boundary = 100;
 
     input
         .lines()
-        .fold((50, 0), |(dial, count), instruction| {
-            let (direction, amount) = instruction.split_at(1);
-            // SAFETY: We trust that the data is valid unsigned integer
-            let amount = amount.parse::<i16>().unwrap();
-            let new_dial = match direction {
-                "L" => {
-                    let mut new_dial = dial - amount;
-                    while new_dial < dial_boundary.start {
-                        new_dial += dial_boundary.end + 1;
-                    }
-                    new_dial
-                }
-                // "R"
-                _ => {
-                    let mut new_dial = dial + amount;
-                    while new_dial > dial_boundary.end {
-                        new_dial -= dial_boundary.end + 1;
-                    }
-                    new_dial
-                }
+        .fold((50, (0, 0)), |(dial, (zeros, passed)), inst| {
+            let (dir, amount) = inst.split_at(1);
+            let amount = amount
+                .parse::<i32>()
+                .map(|n| if dir == "L" { -n } else { n })
+                .unwrap();
+
+            let at_zero: i32 = ((dial + amount) % boundary == 0).into();
+
+            let delta = if amount >= 0 {
+                (dial + amount) / boundary
+            } else {
+                // going left is tricky, calc distance to next zero crossing
+                // we have to reverse the dial since the amount we calculate is actual increasing,
+                // so we flip the direction so e.g. 40 turns into 60 and L50 will result in 60 + 50
+                // which is 110 and goes over the boundary once.
+                //
+                // if we didn't do that we would end with 40 + 50 which is 90 and doesn't go over
+                // the boundary.
+                let offset = (boundary - dial) % boundary;
+                (offset - amount) / boundary
             };
 
-            eprintln!("{}, {}", instruction, new_dial);
+            // we want remainder, rem_euclid gets the remainder against the boundary
+            let dial = (dial + amount).rem_euclid(boundary);
 
-            (new_dial, if new_dial == 0 { count + 1 } else { count })
+            (dial, (zeros + at_zero, passed + delta))
         })
         .1
 }
@@ -63,7 +45,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn day1p1_test() {
+    fn p1_test() {
         let input = "L68
 L30
 R48
@@ -74,9 +56,32 @@ L1
 L99
 R14
 L82
-L230
 ";
 
-        assert_eq!(3, day1p1(input))
+        assert_eq!(3, p(input).0)
+    }
+
+    #[test]
+    fn p2_test_a() {
+        let input = "L68
+L30
+R48
+L5
+R60
+L55
+L1
+L99
+R14
+L82
+";
+
+        assert_eq!(6, p(input).1)
+    }
+
+    #[test]
+    fn p2_test_b() {
+        let input = "R1000";
+
+        assert_eq!(10, p(input).1)
     }
 }
