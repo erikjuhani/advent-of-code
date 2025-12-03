@@ -1,7 +1,6 @@
-use std::mem::replace;
-
 fn main() {
     println!("DAY1 p1: {}", p1(include_str!("../../../input/day3")));
+    println!("DAY1 p2: {}", p2(include_str!("../../../input/day3")));
 }
 
 fn p1(input: &str) -> usize {
@@ -28,18 +27,20 @@ fn p2(input: &str) -> usize {
     input
         .lines()
         .map(|line| {
-            let mut max_joltage = 0;
-            for x in (0..12) {
-                for (cursor, a) in line.char_indices() {
-                    for b in line[cursor + 1..].chars() {
-                        let n = format!("{a}{b}").parse::<usize>().unwrap();
-                        if max_joltage < n {
-                            max_joltage = n;
-                        }
-                    }
-                }
+            let mut bank = line.as_bytes();
+            let mut max_joltage = String::new();
+            for x in (0..12).rev() {
+                let (cursor, max) = bank[..bank.len() - x].iter().enumerate().fold(
+                    (0, 0u8),
+                    |(idx, max), (i, n)| {
+                        if *n > max { (i, *n) } else { (idx, max) }
+                    },
+                );
+                bank = &bank[cursor + 1..];
+                max_joltage.push(char::from(max));
             }
-            max_joltage
+
+            max_joltage.parse::<usize>().unwrap()
         })
         .sum()
 }
