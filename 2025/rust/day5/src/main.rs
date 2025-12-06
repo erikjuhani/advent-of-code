@@ -2,15 +2,9 @@ use std::ops::Range;
 
 fn main() {
     println!("DAY5 p1: {}", p1(include_str!("../../../input/day5")));
-    // println!("DAY5 p2: {}", p2(include_str!("../../../input/day5")));
+    println!("DAY5 p2: {}", p2(include_str!("../../../input/day5")));
 }
 
-// fresh ingredient id range before blank line (split at blank line)
-// after blank line list of availabe ids
-//
-// Fresh id ranges are inclusive 3-5 means 3, 4, 5 are fresh, can overlap.
-//
-//
 fn p1(input: &str) -> usize {
     let (ranges, ids) = input.split_once("\n\n").unwrap();
 
@@ -54,16 +48,49 @@ fn p1(input: &str) -> usize {
     .count()
 }
 
+fn p2(input: &str) -> usize {
+    let (ranges, _) = input.split_once("\n\n").unwrap();
+
+    let mut ranges = ranges
+        .lines()
+        .map(|range_raw| {
+            let (start, end) = range_raw.split_once('-').unwrap();
+            (
+                start.parse::<usize>().unwrap(),
+                end.parse::<usize>().unwrap(),
+            )
+        })
+        .collect::<Vec<_>>();
+
+    ranges.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let (last, mut r) =
+        ranges
+            .into_iter()
+            .fold((0..0, vec![]), |(current, mut r), (start, end)| {
+                if start < current.end {
+                    (current.start..current.end.max(end + 1), r)
+                } else {
+                    r.push(current.clone());
+                    (start..end + 1, r)
+                }
+            });
+
+    r.push(last);
+
+    r.iter().cloned().flatten().count()
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::p1;
+    use crate::{p1, p2};
 
     #[test]
     fn p1_test() {
         let input = "3-5
 10-14
-12-18
 16-20
+12-18
 
 1
 5
@@ -73,5 +100,22 @@ mod tests {
 32";
 
         assert_eq!(3, p1(input))
+    }
+
+    #[test]
+    fn p2_test() {
+        let input = "3-5
+10-14
+16-20
+12-18
+
+1
+5
+8
+11
+17
+32";
+
+        assert_eq!(14, p2(input))
     }
 }
